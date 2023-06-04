@@ -229,9 +229,9 @@ struct AuthorPhotos {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Thumbnail {
-	height: i64,
+	height: Option<i64>,
 	url: String,
-	width: i64,
+	width: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
