@@ -128,7 +128,7 @@ struct PaidSticker {
 	sticker: PollImage,
 	stickerDisplayHeight: i64,
 	stickerDisplayWidth: i64,
-	timestampText: SimpleText,
+	timestampText: Option<SimpleText>,
 	timestampUsec: String,
 	trackingParams: Option<String>,
 }
@@ -143,7 +143,7 @@ struct GiftRedemptionAnnouncement {
 	contextMenuEndpoint: serde_json::Value,
 	id: String,
 	message: RunsContainer,
-	timestampText: SimpleText,
+	timestampText: Option<SimpleText>,
 	timestampUsec: String,
 	trackingParams: Option<String>,
 }
@@ -185,7 +185,7 @@ struct LiveChatMembershipItemRenderer {
 	headerSubtext: HeaderSubtextType,
 	id: String,
 	message: Option<RunsContainer>,
-	timestampText: SimpleText,
+	timestampText: Option<SimpleText>,
 	timestampUsec: String,
 	trackingParams: Option<String>,
 }
@@ -216,7 +216,7 @@ struct PaidMessage {
 	message: Option<RunsContainer>,
 	purchaseAmountText: SimpleText,
 	textInputBackgroundColor: i64,
-	timestampText: SimpleText,
+	timestampText: Option<SimpleText>,
 	timestampColor: i64,
 	timestampUsec: String,
 	//trackingParams: String,
@@ -231,7 +231,7 @@ struct AuthorPhotos {
 struct Thumbnail {
 	height: Option<i64>,
 	url: String,
-	width: Option<i64>,
+	width: Option<i64>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -377,7 +377,23 @@ fn main() {
 							
 							let sep = "==========donation start==========".black().on_truecolor(red, green, blue);
 							println!("{}",sep);
-							println!("time: {}", liveChatPaidMessageRenderer.timestampText.simpleText);
+							let timestring = match liveChatPaidMessageRenderer.timestampText {
+								// should always exist in replays
+								Some(timestamp) => timestamp.simpleText,
+								// if it doesn't exist fallback to .timestampUsec
+								// and convert from microseconds to datetime
+
+								None => {
+									use chrono::NaiveDateTime;
+									let timestamp = liveChatPaidMessageRenderer.timestampUsec;
+									let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
+									let timestamp = timestamp / 1000000;
+									let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
+									timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
+								}
+							};
+
+							println!("time: {}", timestring);
 							//println!("donation: {:#?}", liveChatPaidMessageRenderer);
 							// print username and channel id
 							println!("username: {}, channel: https://youtube.com/channel/{}", liveChatPaidMessageRenderer.authorName.simpleText, liveChatPaidMessageRenderer.authorExternalChannelId);
@@ -447,7 +463,7 @@ fn main() {
 								channel_id: liveChatPaidMessageRenderer.authorExternalChannelId.clone(),
 								amount: liveChatPaidMessageRenderer.purchaseAmountText.simpleText.clone(),
 								message: message,
-								time: liveChatPaidMessageRenderer.timestampText.simpleText.clone(),
+								time: timestring.clone(),
 								header_color: liveChatPaidMessageRenderer.headerBackgroundColor,
 								body_color: liveChatPaidMessageRenderer.bodyBackgroundColor,
 							};
@@ -461,7 +477,22 @@ fn main() {
 							// join button
 							let sep = "=========membership start=========".black().on_truecolor(10, 128, 67);
 							println!("{}",sep);
-							println!("time: {}", liveChatMembershipItemRenderer.timestampText.simpleText);
+							let timestring = match liveChatMembershipItemRenderer.timestampText {
+								// should always exist in replays
+								Some(timestamp) => timestamp.simpleText,
+								// if it doesn't exist fallback to .timestampUsec
+								// and convert from microseconds to datetime
+
+								None => {
+									use chrono::NaiveDateTime;
+									let timestamp = liveChatMembershipItemRenderer.timestampUsec;
+									let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
+									let timestamp = timestamp / 1000000;
+									let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
+									timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
+								}
+							};
+							println!("time: {}", timestring);
 							//println!("membership: {:#?}", liveChatMembershipItemRenderer);
 							// print username and channel id
 							println!("username: {}, channel: https://youtube.com/channel/{}", liveChatMembershipItemRenderer.authorName.simpleText, liveChatMembershipItemRenderer.authorExternalChannelId);
@@ -564,7 +595,7 @@ fn main() {
 								channel_id: liveChatMembershipItemRenderer.authorExternalChannelId.clone(),
 								months: months,
 								message: message,
-								time: liveChatMembershipItemRenderer.timestampText.simpleText.clone(),
+								time: timestring.clone(),
 								header_color: i64::from_str_radix("0a8043", 16).expect("somhow failed to parse sponsor color"),
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
@@ -601,6 +632,16 @@ fn main() {
 								None=>{}
 							};
 
+
+							let timestring = {
+								use chrono::NaiveDateTime;
+								let timestamp = liveChatSponsorshipsGiftPurchaseAnnouncementRenderer.timestampUsec;
+								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
+								let timestamp = timestamp / 1000000;
+								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
+								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
+							};
+
 							// struct for exporting to json
 							#[derive(Serialize, Deserialize, Debug)]
 							struct Gift {
@@ -608,6 +649,7 @@ fn main() {
 								json_type: String,
 								username: String,
 								channel_id: String,
+								time: String,
 								number: String,
 								header_color: i64,
 								body_color: i64,
@@ -618,6 +660,7 @@ fn main() {
 							// create gifting donation struct
 							let gift = Gift {
 								json_type: "GiftingMembership".to_string(),
+								time: timestring.clone(),
 								thumbnail_url: liveChatSponsorshipsGiftPurchaseAnnouncementRenderer.header.liveChatSponsorshipsHeaderRenderer.authorPhoto.thumbnails.last().expect("could not get thumbnail url").url.clone(),
 								username: liveChatSponsorshipsGiftPurchaseAnnouncementRenderer.header.liveChatSponsorshipsHeaderRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatSponsorshipsGiftPurchaseAnnouncementRenderer.authorExternalChannelId.clone(),
@@ -640,7 +683,24 @@ fn main() {
 
 							let sep = "=========membership redemption begins=========".black().on_truecolor(15, 157, 88);
 							println!("{}",sep);
-							println!("time: {}", liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.timestampText.simpleText);
+
+							let timestring = match liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.timestampText {
+								// should always exist in replays
+								Some(timestamp) => timestamp.simpleText,
+								// if it doesn't exist fallback to .timestampUsec
+								// and convert from microseconds to datetime
+
+								None => {
+									use chrono::NaiveDateTime;
+									let timestamp = liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.timestampUsec;
+									let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
+									let timestamp = timestamp / 1000000;
+									let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
+									timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
+								}
+							};
+
+							println!("time: {}", timestring);
 
 							// print username and message
 							let mut message = String::new();
@@ -698,7 +758,7 @@ fn main() {
 								username: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorExternalChannelId.clone(),
 								sender: sender,
-								time: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.timestampText.simpleText.clone(),
+								time: timestring.clone(),
 								header_color: i64::from_str_radix("0a8043", 16).expect("somhow failed to parse sponsor color"),
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
@@ -730,7 +790,23 @@ fn main() {
 
 							let sep = "=========sticker start=========".black().on_truecolor(red, green, blue);
 							println!("{}",sep);
-							println!("time: {}", liveChatPaidStickerRenderer.timestampText.simpleText);
+
+							let timestring = match liveChatPaidStickerRenderer.timestampText {
+								// should always exist in replays
+								Some(timestamp) => timestamp.simpleText,
+								// if it doesn't exist fallback to .timestampUsec
+								// and convert from microseconds to datetime
+
+								None => {
+									use chrono::NaiveDateTime;
+									let timestamp = liveChatPaidStickerRenderer.timestampUsec;
+									let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
+									let timestamp = timestamp / 1000000;
+									let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
+									timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
+								}
+							};
+							println!("time: {}", timestring);
 
 							// sticker
 							//println!("sticker: {:#?}", liveChatPaidStickerRenderer);
@@ -760,7 +836,7 @@ fn main() {
 							// create gifting donation struct
 							let sticker = Sticker {
 								json_type: "Sticker".to_string(),
-								time: liveChatPaidStickerRenderer.timestampText.simpleText.clone(),
+								time: timestring.clone(),
 								username: liveChatPaidStickerRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatPaidStickerRenderer.authorExternalChannelId.clone(),
 								sticker_cost: liveChatPaidStickerRenderer.purchaseAmountText.simpleText.clone(),
