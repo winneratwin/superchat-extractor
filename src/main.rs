@@ -1,8 +1,9 @@
 use std::num;
 
-use clap::{Parser, builder::Str};
+use clap::{Parser};
 use serde::{Deserialize, Serialize};
 use colored::Colorize;
+use std::io::Write;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about=None)]
@@ -10,6 +11,13 @@ struct Cli {
     #[arg(long)]
 	#[clap(allow_hyphen_values = true)]
     file: String,
+
+    #[arg(long)]
+	#[clap(allow_hyphen_values = true)]
+    outputfile: Option<String>,
+
+	#[arg(long)]
+	dontprint: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -345,6 +353,14 @@ fn main() {
 	let mut num_redemptions = 0;
 	let mut num_stickers = 0;
 
+	let mut donations = Vec::new();
+	macro_rules! println {
+		($($rest:tt)*) => {
+			if !args.dontprint {
+				std::println!($($rest)*)
+			}
+		}
+	}
 	// iterate over every line in the file
 	for line in file.lines() {
 		// parse the line as chat item
@@ -467,7 +483,7 @@ fn main() {
 								header_color: liveChatPaidMessageRenderer.headerBackgroundColor,
 								body_color: liveChatPaidMessageRenderer.bodyBackgroundColor,
 							};
-							eprintln!("{}",serde_json::to_string(&donation).expect("could not serialize donation"));
+							donations.push(serde_json::to_string(&donation).expect("could not serialize donation"));
 
 							println!("===========donation end===========");
 
@@ -600,8 +616,7 @@ fn main() {
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
 
-							// print donation struct
-							eprintln!("{}",serde_json::to_string(&membership).expect("could not serialize membership"));
+							donations.push(serde_json::to_string(&membership).expect("could not serialize donation"));
 
 							println!("==========membership end==========");
 						},
@@ -669,8 +684,7 @@ fn main() {
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
 
-							// print donation struct
-							eprintln!("{}",serde_json::to_string(&gift).expect("could not serialize gift"));
+							donations.push(serde_json::to_string(&gift).expect("could not serialize donation"));
 
 
 							println!("==========gifting memberships end==========")
@@ -763,8 +777,7 @@ fn main() {
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
 
-							// print donation struct
-							eprintln!("{}",serde_json::to_string(&redemption).expect("could not serialize gift"));
+							donations.push(serde_json::to_string(&redemption).expect("could not serialize donation"));
 
 							println!("{} {}", liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorName.simpleText, message);
 							// print recipient channel link
@@ -834,7 +847,7 @@ fn main() {
 							}
 
 							// create gifting donation struct
-							let sticker = Sticker {
+							let donation = Sticker {
 								json_type: "Sticker".to_string(),
 								time: timestring.clone(),
 								username: liveChatPaidStickerRenderer.authorName.simpleText.clone(),
@@ -847,8 +860,7 @@ fn main() {
 								body_color: i64::from_str_radix(&background_color, 16).expect("somhow failed to parse sponsor color"),
 							};
 
-							// print donation struct
-							eprintln!("{}",serde_json::to_string(&sticker).expect("could not serialize gift"));
+							donations.push(serde_json::to_string(&donation).expect("could not serialize donation"));
 
 							println!("==========sticker end==========")
 						},
@@ -1012,5 +1024,13 @@ fn main() {
 
 	// average gift amount
 	println!("average gift amount: {}", num_redemptions as f32 / num_gifts as f32);
+
+	// if args.outputfile then write all donations to file
+	if let Some(outputfile) = args.outputfile {
+		let mut file = std::fs::File::create(outputfile).unwrap();
+		for donation in donations {
+			file.write_all(format!("{}\n", donation).as_bytes()).unwrap();
+		}
+	}
 
 }
