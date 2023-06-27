@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use std::num;
 use clap::{Parser};
 use serde::{Deserialize, Serialize};
 use colored::Colorize;
@@ -19,12 +18,15 @@ struct Cli {
 
 	#[arg(long)]
 	dontprint: bool,
+
+	#[arg(long)]
+	live: bool,
 }
 
 #[derive(Debug, Deserialize)]
 struct ChatItem {
-    isLive: Option<bool>,
-    videoOffsetTimeMsec: Option<String>,
+    //isLive: Option<bool>,
+    //videoOffsetTimeMsec: Option<String>,
     replayChatItemAction: ReplayChatItemAction,
 }
 
@@ -62,11 +64,11 @@ enum Action {
 		clickTrackingParams: Option<String>,
 	},
 	RemoveChatItemAction {
-		removeChatItemAction: serde_json::Value,
+		removeChatItemAction: RemoveChatItem,
 		clickTrackingParams: Option<String>,
 	},
 	RemoveChatItemByAuthorAction {
-		removeChatItemByAuthorAction: serde_json::Value,
+		removeChatItemByAuthorAction: RemoveChannelItem,
 		clickTrackingParams: Option<String>,
 	},
 	ReplaceChatItemAction {
@@ -89,6 +91,16 @@ enum Action {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct RemoveChatItem {
+	targetItemId: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct RemoveChannelItem {
+	externalChannelId: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 enum ChatItemType {
 	LiveChatMembershipItemRenderer {
@@ -107,7 +119,7 @@ enum ChatItemType {
 		liveChatSponsorshipsGiftRedemptionAnnouncementRenderer: GiftRedemptionAnnouncement,
 	},
 	LiveChatTextMessageRenderer {
-		liveChatTextMessageRenderer: serde_json::Value,
+		liveChatTextMessageRenderer: LiveChatTextMessage,
 	},
 	LiveChatViewerEngagementMessageRenderer {
 		liveChatViewerEngagementMessageRenderer: serde_json::Value,
@@ -119,6 +131,21 @@ enum ChatItemType {
 		liveChatModeChangeMessageRenderer: serde_json::Value,
 	},
 	Unknown(serde_json::Value)
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct LiveChatTextMessage {
+	authorBadges: Option<Vec<AuthorBadges>>,
+	authorExternalChannelId: String,
+	authorName: SimpleText,
+	authorPhoto: AuthorPhotos,
+	contextMenuAccessibility: serde_json::Value,
+	contextMenuEndpoint: serde_json::Value,
+	id: String,
+	message: RunsContainer,
+	timestampText: Option<SimpleText>,
+	timestampUsec: String,
+	trackingParams: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -141,7 +168,6 @@ struct PaidSticker {
 	timestampUsec: String,
 	trackingParams: Option<String>,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 struct GiftRedemptionAnnouncement {
@@ -171,8 +197,20 @@ struct GiftPurchaseHeader {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct AuthorBadges {
+	liveChatAuthorBadgeRenderer: LiveChatAuthorBadgeRenderer,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct LiveChatAuthorBadgeRenderer {
+	customThumbnail: Option<AuthorPhotos>,
+	accessibility: EmoteAccessability,
+	tooltip: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct GiftPurchaseHeaderRenderer {
-	authorBadges: Option<Vec<serde_json::Value>>,
+	authorBadges: Option<Vec<AuthorBadges>>,
 	authorName: SimpleText,
 	authorPhoto: AuthorPhotos,
 	contextMenuAccessibility: serde_json::Value,
@@ -184,7 +222,7 @@ struct GiftPurchaseHeaderRenderer {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct LiveChatMembershipItemRenderer {
-	authorBadges: Option<Vec<serde_json::Value>>,
+	authorBadges: Option<Vec<AuthorBadges>>,
 	authorExternalChannelId: String,
 	authorName: SimpleText,
 	authorPhoto: AuthorPhotos,
@@ -210,7 +248,7 @@ enum HeaderSubtextType {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct PaidMessage {
-	authorBadges: Option<Vec<serde_json::Value>>,
+	authorBadges: Option<Vec<AuthorBadges>>,
 	authorExternalChannelId: String,
 	authorName: SimpleText,
 	authorNameTextColor: i64,
@@ -342,6 +380,159 @@ struct SimpleText {
 	simpleText:String
 }
 
+
+
+
+
+
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Sticker {
+	#[serde(rename = "type")]
+	json_type: String,
+	username: String,
+	channel_id: String,
+	sticker_cost: String,
+	sticker_description: String,
+	sticker_image_url: String,
+	time: String,
+	thumbnail_url: String,
+	header_color: i64,
+	body_color: i64,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct Redemption {
+	#[serde(rename = "type")]
+	json_type: String,
+	thumbnail_url: String,
+	username: String,
+	channel_id: String,
+	time: String,
+	sender: String,
+	header_color: i64,
+	body_color: i64,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct Gift {
+	#[serde(rename = "type")]
+	json_type: String,
+	username: String,
+	channel_id: String,
+	time: String,
+	number: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct Membership {
+	#[serde(rename = "type")]
+	json_type: String,
+	username: String,
+	channel_id: String,
+	months: String,
+	message: Option<String>,
+	time: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct Donation {
+	#[serde(rename = "type")]
+	json_type: String,
+	username: String,
+	channel_id: String,
+	amount: String,
+	message: Option<String>,
+	time: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+
+
+
+
+
+
+
+
+
+#[derive(Serialize, Deserialize, Debug)]
+struct StickerDeserialization {
+	username: String,
+	channel_id: String,
+	sticker_cost: String,
+	sticker_description: String,
+	sticker_image_url: String,
+	time: String,
+	thumbnail_url: String,
+	header_color: i64,
+	body_color: i64,
+}
+#[derive(Serialize, Deserialize, Debug)]
+struct RedemptionDeserialization {
+	thumbnail_url: String,
+	username: String,
+	channel_id: String,
+	time: String,
+	sender: String,
+	header_color: i64,
+	body_color: i64,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct GiftDeserialization {
+	username: String,
+	channel_id: String,
+	time: String,
+	number: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct MembershipDeserialization {
+	username: String,
+	channel_id: String,
+	months: String,
+	message: Option<String>,
+	time: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+// struct for exporting to json
+#[derive(Serialize, Deserialize, Debug)]
+struct DonationDeserialization {
+	username: String,
+	channel_id: String,
+	amount: String,
+	message: Option<String>,
+	time: String,
+	header_color: i64,
+	body_color: i64,
+	thumbnail_url: String,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+enum ExportStructs {
+	Donation(DonationDeserialization),
+	Membership(MembershipDeserialization),
+	GiftMembership(RedemptionDeserialization),
+	GiftingMembership(GiftDeserialization),
+	Sticker(StickerDeserialization),
+}
+
+
 fn main() {
     // get file from cli using clap
     let args = Cli::parse();
@@ -362,35 +553,37 @@ fn main() {
 			}
 		}
 	}
+
+	struct TextChat {
+		message: String,
+		external_channel_id: String,
+		id: String,
+	}
+
+	let mut messages:Vec<TextChat> = Vec::new();
+	let mut removed_channels:Vec<(String,Vec<ExportStructs>,Vec<String>)> = Vec::new();
+	let mut removed_messages:Vec<String> = Vec::new();
+
 	// iterate over every line in the file
 	for line in file.lines() {
+		// parse as json value
+		//let json: serde_json::Value = serde_json::from_str(line).expect("could not parse line");
+		//println!("json: {json:?}");
+
 		// parse the line as chat item
 		let chat_item: ChatItem = serde_json::from_str(line).expect("could not parse line");
 		for action in chat_item.replayChatItemAction.actions {
 			match action {
-				Action::AddChatItemAction { addChatItemAction, clickTrackingParams } => {
+				Action::AddChatItemAction { addChatItemAction, .. } => {
+					//println!("addChatItemAction: {:#?}", addChatItemAction);
 					// adds things in the chat like messages, donations, join button, etc.
 					match addChatItemAction.item {
 						ChatItemType::LiveChatPaidMessageRenderer { liveChatPaidMessageRenderer } => {
-							// struct for exporting to json
-							#[derive(Serialize, Deserialize, Debug)]
-							struct Donation {
-								#[serde(rename = "type")]
-								json_type: String,
-								username: String,
-								channel_id: String,
-								amount: String,
-								message: Option<String>,
-								time: String,
-								header_color: i64,
-								body_color: i64,
-								thumbnail_url: String,
-							}
 							
 							// donation
 							num_superchats += 1;
 							//continue;
-							
+				
 
 							// liveChatPaidMessageRenderer.bodyBackgroundColor is the raw decimal value of the color
 							// convert it to hex
@@ -402,7 +595,7 @@ fn main() {
 							assert!(background_color.len() == 8, "background color is not 8 characters long: {background_color}");
 
 							// split into alpha, red, green, blue u8 values
-							let alpha = u8::from_str_radix(&background_color[0..2], 16).expect("could not parse alpha");
+							//let alpha = u8::from_str_radix(&background_color[0..2], 16).expect("could not parse alpha");
 							let red = u8::from_str_radix(&background_color[2..4], 16).expect("could not parse red");
 							let green = u8::from_str_radix(&background_color[4..6], 16).expect("could not parse green");
 							let blue = u8::from_str_radix(&background_color[6..8], 16).expect("could not parse blue");
@@ -416,7 +609,7 @@ fn main() {
 								use chrono::NaiveDateTime;
 								let timestamp = liveChatPaidMessageRenderer.timestampUsec;
 								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
-								let timestamp = timestamp / 1000000;
+								let timestamp = timestamp / 1_000_000;
 								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
 								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
 							};
@@ -436,7 +629,7 @@ fn main() {
 							if let Some(message_run) = liveChatPaidMessageRenderer.message {
 								for run in message_run.runs {
 									match run {
-										RunsTypes::Text { text, italics, bold } => {
+										RunsTypes::Text { text, .. } => {
 											message.push_str(&text);
 										},
 										RunsTypes::Emoji { emoji } => {
@@ -476,7 +669,7 @@ fn main() {
 								username: liveChatPaidMessageRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatPaidMessageRenderer.authorExternalChannelId.clone(),
 								amount: liveChatPaidMessageRenderer.purchaseAmountText.simpleText.clone(),
-								message: message,
+								message,
 								time: timestring.clone(),
 								header_color: liveChatPaidMessageRenderer.headerBackgroundColor,
 								body_color: liveChatPaidMessageRenderer.bodyBackgroundColor,
@@ -487,20 +680,6 @@ fn main() {
 
 						},
 						ChatItemType::LiveChatMembershipItemRenderer { liveChatMembershipItemRenderer } => {
-							// struct for exporting to json
-							#[derive(Serialize, Deserialize, Debug)]
-							struct Membership {
-								#[serde(rename = "type")]
-								json_type: String,
-								username: String,
-								channel_id: String,
-								months: String,
-								message: Option<String>,
-								time: String,
-								header_color: i64,
-								body_color: i64,
-								thumbnail_url: String,
-							}
 
 
 							num_memberships+=1;
@@ -514,7 +693,7 @@ fn main() {
 								use chrono::NaiveDateTime;
 								let timestamp = liveChatMembershipItemRenderer.timestampUsec;
 								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
-								let timestamp = timestamp / 1000000;
+								let timestamp = timestamp / 1_000_000;
 								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
 								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
 							};
@@ -529,12 +708,11 @@ fn main() {
 							// so check if headerPrimaryText is None and if it is then say 0 months
 							// otherwise the number of months is in headerPrimaryText
 
-							let mut months = String::new();
-							if let Some(headerPrimaryText) = liveChatMembershipItemRenderer.headerPrimaryText {
+							let months = if let Some(headerPrimaryText) = liveChatMembershipItemRenderer.headerPrimaryText {
 								let mut message = String::new();
 								for runs in headerPrimaryText.runs {
 									match runs {
-										RunsTypes::Text { text, italics, bold } => {
+										RunsTypes::Text { text, .. } => {
 											message.push_str(&text);
 										},
 										RunsTypes::Emoji { emoji } => {
@@ -556,18 +734,18 @@ fn main() {
 									}
 								}
 								println!("months: {}", message);
-								months = message;
+								message
 							} else {
 								println!("months: New member.");
-								months = "New member.".to_string();
-							}
+								"New member.".to_string()
+							};
 
 							// print message if there is one
 							let mut message = String::new();
 							if let Some(lmessage) = liveChatMembershipItemRenderer.message {
 								for run in lmessage.runs {
 									match run {
-										RunsTypes::Text { text, italics, bold } => {
+										RunsTypes::Text { text, .. } => {
 											message.push_str(&text);
 										},
 										RunsTypes::Emoji { emoji } => {
@@ -604,31 +782,17 @@ fn main() {
 								thumbnail_url: liveChatMembershipItemRenderer.authorPhoto.thumbnails.last().expect("could not get thumbnail url").url.clone(),
 								username: liveChatMembershipItemRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatMembershipItemRenderer.authorExternalChannelId.clone(),
-								months: months,
-								message: message,
+								months,
+								message,
 								time: timestring.clone(),
 								header_color: i64::from_str_radix("0a8043", 16).expect("somhow failed to parse sponsor color"),
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
 							};
-
 							donations.push(serde_json::to_string(&membership).expect("could not serialize donation"));
 
 							println!("==========membership end==========");
 						},
 						ChatItemType::LiveChatSponsorshipsGiftPurchaseAnnouncementRenderer { liveChatSponsorshipsGiftPurchaseAnnouncementRenderer } => {
-							// struct for exporting to json
-							#[derive(Serialize, Deserialize, Debug)]
-							struct Gift {
-								#[serde(rename = "type")]
-								json_type: String,
-								username: String,
-								channel_id: String,
-								time: String,
-								number: String,
-								header_color: i64,
-								body_color: i64,
-								thumbnail_url: String,
-							}
 
 							num_gifts+=1;
 							// gift purchase
@@ -643,7 +807,7 @@ fn main() {
 							let mut num_gifted = String::new();
 							if let Some(e) = number_position {
 								match e {
-									RunsTypes::Text { text, italics, bold } => {
+									RunsTypes::Text { text, .. } => {
 										num_gifted = text.clone();
 										println!("gifted memberships: {}", text);
 									},
@@ -658,7 +822,7 @@ fn main() {
 								use chrono::NaiveDateTime;
 								let timestamp = liveChatSponsorshipsGiftPurchaseAnnouncementRenderer.timestampUsec;
 								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
-								let timestamp = timestamp / 1000000;
+								let timestamp = timestamp / 1_000_000;
 								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
 								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
 							};
@@ -683,19 +847,6 @@ fn main() {
 
 						},
 						ChatItemType::LiveChatSponsorshipsGiftRedemptionAnnouncementRenderer { liveChatSponsorshipsGiftRedemptionAnnouncementRenderer } => {
-							#[derive(Serialize, Deserialize, Debug)]
-							struct Redemption {
-								#[serde(rename = "type")]
-								json_type: String,
-								thumbnail_url: String,
-								username: String,
-								channel_id: String,
-								time: String,
-								sender: String,
-								header_color: i64,
-								body_color: i64,
-							}
-
 							num_redemptions+=1;
 							// message about person who got a gift
 							//println!("membership gift receive: {:#?}", liveChatSponsorshipsGiftRedemptionAnnouncementRenderer);
@@ -710,7 +861,7 @@ fn main() {
 								use chrono::NaiveDateTime;
 								let timestamp = liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.timestampUsec;
 								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
-								let timestamp = timestamp / 1000000;
+								let timestamp = timestamp / 1_000_000;
 								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
 								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
 							};
@@ -720,7 +871,7 @@ fn main() {
 							let mut message = String::new();
 							for part in &liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.message.runs {
 								match part {
-									RunsTypes::Text { text, italics, bold } => {
+									RunsTypes::Text { text, .. } => {
 										message.push_str(text);
 									},
 									RunsTypes::Emoji { emoji } => {
@@ -743,7 +894,7 @@ fn main() {
 							}
 
 							let mut sender = String::from("unknown");
-							if let Some(RunsTypes::Text { text, italics, bold }) = liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.message.runs.into_iter().nth(1) {
+							if let Some(RunsTypes::Text { text, .. }) = liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.message.runs.into_iter().nth(1) {
 								sender = text;
 							}
 
@@ -753,7 +904,7 @@ fn main() {
 								thumbnail_url: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorPhoto.thumbnails.last().expect("could not get thumbnail url").url.clone(),
 								username: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorName.simpleText.clone(),
 								channel_id: liveChatSponsorshipsGiftRedemptionAnnouncementRenderer.authorExternalChannelId.clone(),
-								sender: sender,
+								sender,
 								time: timestring.clone(),
 								header_color: i64::from_str_radix("0a8043", 16).expect("somhow failed to parse sponsor color"),
 								body_color: i64::from_str_radix("0f9d58", 16).expect("somhow failed to parse sponsor color"),
@@ -767,20 +918,6 @@ fn main() {
 							println!("==========membership redemption ends==========");
 						},
 						ChatItemType::LiveChatPaidStickerRenderer { liveChatPaidStickerRenderer } => {
-							#[derive(Serialize, Deserialize, Debug)]
-							struct Sticker {
-								#[serde(rename = "type")]
-								json_type: String,
-								username: String,
-								channel_id: String,
-								sticker_cost: String,
-								sticker_description: String,
-								sticker_image_url: String,
-								time: String,
-								thumbnail_url: String,
-								header_color: i64,
-								body_color: i64,
-							}
 
 							num_stickers+=1;
 							// liveChatPaidMessageRenderer.bodyBackgroundColor is the raw decimal value of the color
@@ -808,7 +945,7 @@ fn main() {
 								use chrono::NaiveDateTime;
 								let timestamp = liveChatPaidStickerRenderer.timestampUsec;
 								let timestamp = timestamp.parse::<i64>().expect("could not parse timestamp");
-								let timestamp = timestamp / 1000000;
+								let timestamp = timestamp / 1_000_000;
 								let timestamp = NaiveDateTime::from_timestamp_opt(timestamp, 0).expect("could not convert timestamp to datetime");
 								timestamp.format("%Y-%m-%d %H:%M:%S").to_string()
 							};
@@ -846,10 +983,40 @@ fn main() {
 							println!("==========sticker end==========");
 						},
 
-
-
 						ChatItemType::LiveChatTextMessageRenderer { liveChatTextMessageRenderer } => {
 							// normal message
+
+							// store text and id
+							let mut message = String::new();
+							for run in liveChatTextMessageRenderer.message.runs {
+								match run {
+									RunsTypes::Text { text, .. } => {
+										message.push_str(&text);
+									},
+									RunsTypes::Emoji { emoji } => {
+										if let Some(is_custom_emoji) = emoji.isCustomEmoji {
+											if is_custom_emoji {
+												message.push_str(format!(":{}:",&emoji.image.accessibility.accessibilityData.label).as_str());
+											} else {
+												message.push_str(&emoji.emojiId);
+											}
+										} else {
+											message.push_str(&emoji.emojiId);
+										}
+
+										//poll_name.push_str(&emoji.image.accessibility.accessibilityData.label);
+									},
+									RunsTypes::Unknown(unknown) => {
+										println!("UNKNOWN VALUE IN RUNS: {:#?}", unknown);
+									},
+								}
+							}
+							let id = liveChatTextMessageRenderer.id.clone();
+							let external_channel_id = liveChatTextMessageRenderer.authorExternalChannelId.clone();
+
+							// append to messages
+							messages.push(TextChat { message, id, external_channel_id });
+
 							num_messages += 1;
 							//println!("live_chat_text_message_renderer: {:#?}", liveChatTextMessageRenderer);
 						}, 
@@ -873,44 +1040,91 @@ fn main() {
 
 					//println!("add_chat_item_action: {:#?}", addChatItemAction.item);
 				},
-				Action::AddBannerToLiveChatCommand { addBannerToLiveChatCommand, clickTrackingParams } => {
+				Action::AddBannerToLiveChatCommand { addBannerToLiveChatCommand, .. } => {
 					//println!("add_banner_to_live_chat_command: {}", addBannerToLiveChatCommand);
 				},
-				Action::AddLiveChatTickerItemAction { addLiveChatTickerItemAction, clickTrackingParams } => {
+				Action::AddLiveChatTickerItemAction { addLiveChatTickerItemAction, .. } => {
 					// youtube join button and donations larger then 5$ are here
 					//println!("add_live_chat_ticker_item_action: {}", addLiveChatTickerItemAction);
 				},
-				Action::CloseLiveChatActionPanelAction { closeLiveChatActionPanelAction, clickTrackingParams } => {
+				Action::CloseLiveChatActionPanelAction { closeLiveChatActionPanelAction, .. } => {
 					//println!("close_live_chat_action_panel_action: {}", closeLiveChatActionPanelAction);
 				},
-				Action::LiveChatReportModerationStateCommand { liveChatReportModerationStateCommand, clickTrackingParams } => {
+				Action::LiveChatReportModerationStateCommand { liveChatReportModerationStateCommand, .. } => {
 					//println!("live_chat_report_moderation_state_command: {}", liveChatReportModerationStateCommand);
 				},
-				Action::RemoveBannerForLiveChatCommand { removeBannerForLiveChatCommand, clickTrackingParams } => {
+				Action::RemoveBannerForLiveChatCommand { removeBannerForLiveChatCommand, .. } => {
 					//println!("remove_banner_for_live_chat_command: {}", removeBannerForLiveChatCommand);
 				},
-				Action::RemoveChatItemAction { removeChatItemAction, clickTrackingParams } => {
-					//println!("remove_chat_item_action: {}", removeChatItemAction);
+				Action::RemoveChatItemAction { removeChatItemAction, .. } => {
+					let removed_message = removeChatItemAction.targetItemId;
+					println!("removed message id: {}", removed_message);
+					removed_messages.push(removed_message.clone());
 				},
-				Action::RemoveChatItemByAuthorAction { removeChatItemByAuthorAction, clickTrackingParams } => {
-					//println!("remove_chat_item_by_author_action: {}", removeChatItemByAuthorAction);
+				Action::RemoveChatItemByAuthorAction { removeChatItemByAuthorAction, .. } => {
+					// remove all messages by author
+					let channel_id = removeChatItemByAuthorAction.externalChannelId;
+					let mut donations_holder = Vec::new();
+					let mut messages_holder = Vec::new();
+
+					// go over messages and donations and print them
+					for message in messages.iter() {
+						if message.external_channel_id == channel_id {
+							messages_holder.push(message.id.clone());
+						}
+					}
+					
+					for donation in donations.iter() {
+						// parse donation as ExportStructs
+						let donation_parsed: ExportStructs = serde_json::from_str(&donation).expect("could not parse donation");
+						match &donation_parsed {
+							ExportStructs::Donation(e) => {
+								if e.channel_id == channel_id {
+									donations_holder.push(donation_parsed);
+								}
+							},
+							ExportStructs::GiftingMembership(e) => {
+								if e.channel_id == channel_id {
+									donations_holder.push(donation_parsed);
+								}
+							},
+							ExportStructs::Sticker(e) => {
+								if e.channel_id == channel_id {
+									donations_holder.push(donation_parsed);
+								}
+							},
+							ExportStructs::Membership(e) => {
+								if e.channel_id == channel_id {
+									donations_holder.push(donation_parsed);
+								}
+							},
+							ExportStructs::GiftMembership(e) => {
+								if e.channel_id == channel_id {
+									donations_holder.push(donation_parsed);
+								}
+							},
+						}
+					}
+
+
+					removed_channels.push((channel_id.clone(), donations_holder, messages_holder));
+					println!("removed message by channel: {channel_id}");
 				},
-				Action::ReplaceChatItemAction { replaceChatItemAction, clickTrackingParams } => {
+				Action::ReplaceChatItemAction { replaceChatItemAction, .. } => {
 					//println!("replace_chat_item_action: {}", replaceChatItemAction);
 				},
-				Action::ShowLiveChatActionPanelAction { showLiveChatActionPanelAction, clickTrackingParams } => {
+				Action::ShowLiveChatActionPanelAction { showLiveChatActionPanelAction, .. } => {
 					//println!("show_live_chat_action_panel_action: {}", showLiveChatActionPanelAction);
 				},
-				Action::UpdateLiveChatPollAction { updateLiveChatPollAction, clickTrackingParams } => {
+				Action::UpdateLiveChatPollAction { updateLiveChatPollAction, .. } => {
 					// handle poll events
-					continue; // disable poll events for now
 
 					println!("==========poll update==========");
 					// print name of poll
 					let mut poll_name = String::new();
 					for run in updateLiveChatPollAction.pollToUpdate.pollRenderer.header.pollHeaderRenderer.pollQuestion.runs {
 						match run {
-							RunsTypes::Text { text, italics, bold } => {
+							RunsTypes::Text { text, .. } => {
 								poll_name.push_str(&text);
 							},
 							RunsTypes::Emoji { emoji } => {
@@ -930,7 +1144,7 @@ fn main() {
 					let mut metadata = String::new();
 					for run in updateLiveChatPollAction.pollToUpdate.pollRenderer.header.pollHeaderRenderer.metadataText.runs {
 						match run {
-							RunsTypes::Text { text, italics, bold } => {
+							RunsTypes::Text { text, .. } => {
 								metadata.push_str(&text);
 							},
 							RunsTypes::Emoji { emoji } => {
@@ -945,15 +1159,12 @@ fn main() {
 					}
 					println!("metadata: {}", metadata);
 
-					
-
-
 					// print choices
 					for choice in updateLiveChatPollAction.pollToUpdate.pollRenderer.choices {
 						let mut choice_name = String::new();
 						for run in choice.text.runs {
 							match run {
-								RunsTypes::Text { text, italics, bold } => {
+								RunsTypes::Text { text, .. } => {
 									choice_name.push_str(&text);
 								},
 								RunsTypes::Emoji { emoji } => {
@@ -974,7 +1185,7 @@ fn main() {
 					println!("==========poll update end==========");
 
 				},
-				Action::ReplaceLiveChatRendererAction { replaceLiveChatRendererAction, clickTrackingParams } => {
+				Action::ReplaceLiveChatRendererAction { replaceLiveChatRendererAction, .. } => {
 					//println!("replace_live_chat_renderer_action: {}", replaceLiveChatRendererAction);
 				},
 
@@ -999,6 +1210,10 @@ fn main() {
 	println!("total redemptions: {}", num_redemptions);
 	// total stickers
 	println!("total stickers: {}", num_stickers);
+	// total message wipes (could be bans or t)
+	println!("total message wipes: {}", removed_channels.len());
+	// total deleted messages
+	println!("total deleted messages: {}", removed_messages.len());
 
 	// messages to superchats ratio
 	println!("messages to superchats ratio: {}", f64::from(num_messages) / f64::from(num_superchats));
@@ -1006,12 +1221,77 @@ fn main() {
 	// average gift amount
 	println!("average gift amount: {}", f64::from(num_redemptions) / f64::from(num_gifts));
 
-	// if args.outputfile then write all donations to file
-	if let Some(outputfile) = args.outputfile {
-		let mut file = std::fs::File::create(outputfile).unwrap();
-		for donation in donations {
-			file.write_all(format!("{donation}\n").as_bytes()).unwrap();
+	// print removed channels and messages
+	println!("removed channels:----------------------------");
+	for (channel,removed_donations,removed_messages) in removed_channels.iter() {
+		println!("removed channel: -------------{}-------------", channel);
+		for donation in removed_donations.iter() {
+			match donation {
+				ExportStructs::Donation(e) => {
+					println!("removed donation: {:?}", e);
+				},
+				ExportStructs::GiftingMembership(e) => {
+					println!("removed gift membership: {:?}", e);
+				},
+				ExportStructs::Sticker(e) => {
+					println!("removed sticker: {:?}", e);
+				},
+				ExportStructs::Membership(e) => {
+					println!("removed membership: {:?}", e);
+				},
+				ExportStructs::GiftMembership(e) => {
+					println!("removed gift membership redemption: {:?}", e);
+				},
+			}
+		}
+		for message_id in removed_messages.iter() {
+			// lookup message in messages and print it
+			for message in messages.iter() {
+				if message.id == *message_id {
+					println!("removed message: {}", message.message);
+				}
+			}
+		}
+	}
+	println!("removed messages:--------------------------------");
+	for message_id in removed_messages.iter() {
+		// lookup message in messages and print it
+		for message in messages.iter() {
+			if message.id == *message_id {
+				println!("removed message: {}", message.message);
+			}
 		}
 	}
 
+	let mut output = String::new();
+	for donation in donations {
+		output.push_str(&format!("{donation}\n"));
+	}
+
+	// if args.outputfile then write all donations to file
+	if let Some(outputfile) = args.outputfile {
+		let mut file = std::fs::File::create(outputfile).expect("failed to create file");
+		file.write_all(output.as_bytes()).expect("failed to write to file");
+	}
+	
+	if args.live {
+		use interprocess::local_socket::LocalSocketStream;
+		// Start the client
+		let mut client = match LocalSocketStream::connect("@live_donations") {
+			Ok(client) => client,
+			Err(e) => {
+				eprintln!("failed to connect to server: {}", e);
+				return;
+			}
+		};
+		// push the filename to the beginning of output
+		// remove file extension from filename
+		let mut filename = args.file;
+		// extension is .live_chat.json.part
+		filename.truncate(filename.len() - 20);
+		output.insert_str(0, &format!("{}\n", filename));
+
+		// Send a message from the client to the server
+		client.write_all(output.as_bytes()).unwrap();
+	}
 }
